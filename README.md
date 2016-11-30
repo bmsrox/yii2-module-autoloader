@@ -25,16 +25,23 @@ Create a module in your app and add config.php in the module root path
         ]
     ];
 
-Set the components in your web.php or main.php
+Set the components in your web.php or main.php.
 
     'components' => [
             ...
             'moduleLoader' => [
-                'class' => 'bmsrox\autoloader\ModuleLoader'
+                'class' => 'bmsrox\autoloader\ModuleLoader',
+                'modules_paths' => [
+                    '@backend/modules', 
+                    '@frontend/modules', 
+                    '@common/modules'
+                    ]
             ],
             ...
      ]
      
+PS: If you are using a basic template the default modules_paths is @app/modules. but you can specify any path.
+          
 Set the bootstrap as
 
     'bootstrap' => [
