@@ -1,0 +1,22 @@
+{
+    "name": "bmsrox/yii2-module-autoloader",
+    "description": "Extension to autoload modules dynamically",
+    "keywords": ["yii2", "extension", "modules", "autoload", "bmsrox"],
+    "homepage": "https://github.com/bmsrox/yii2-module-autoloader",
+    "type": "yii2-extension",
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Bruno Marinho",
+            "email": "bmsrox@gmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "~2.0.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "bmsrox\\autoloader\\": ""
+        }
+    }
+}
