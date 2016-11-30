@@ -117,4 +117,11 @@ In your module/config.php add a key into array config
             ['class' => SidebarMenu::className(), 'event' => SidebarMenu::REGISTER, 'callback' => [Events::className(), 'onMenuRegister']],
         ],
         
+Call the Menu class to render a dynamic menu 
+    
+            echo Menu::widget([
+                'items' => (new \app\components\SidebarMenu())->getItem(),
+            ]);
+           
+        
 So you can add many events into your module that it will be added automatically.
