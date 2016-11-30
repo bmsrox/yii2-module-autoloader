@@ -7,6 +7,13 @@ use yii\base\BootstrapInterface;
 use yii\base\Event;
 use yii\base\InvalidConfigException;
 
+/**
+ * ModuleLoader provide a simple module autoload
+ *
+ * @package bmsrox\autoloader
+ * @author Bruno Marinho <bmsrox@gmail.com>
+ */
+
 class ModuleLoader implements BootstrapInterface
 {
 
@@ -31,8 +38,8 @@ class ModuleLoader implements BootstrapInterface
     }
 
     /**
-     * Get the module configuration file
-     *
+     * Get the module configuration file `module/config.php`
+     * ```php
      * return [
      *    'id' => 'admin',
      *    'class' => AdminModule::className(),
@@ -43,7 +50,7 @@ class ModuleLoader implements BootstrapInterface
      *       '/admin' => '/admin/default/index'
      *    ]
      *  ];
-     *
+     * ```
      * @throws InvalidConfigException
      */
     private function getModulesConfig() {
