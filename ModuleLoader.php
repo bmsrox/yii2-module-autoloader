@@ -8,8 +8,8 @@ use yii\base\Event;
 use yii\base\InvalidConfigException;
 
 /**
- * ModuleLoader provide a simple module autoload
- *
+ * ModuleLoader provide a simple module autoload based on humhub component
+ * @see https://github.com/humhub/humhub/blob/master/protected/humhub/components/bootstrap/ModuleAutoLoader.php
  * @package bmsrox\autoloader
  * @author Bruno Marinho <bmsrox@gmail.com>
  */
@@ -17,10 +17,7 @@ use yii\base\InvalidConfigException;
 class ModuleLoader implements BootstrapInterface
 {
 
-    /**
-     * @var array
-     */
-    private $modules = [];
+    const CACHE_ID = 'modules_config';
 
     /**
      * Specify the modules folders
@@ -34,7 +31,6 @@ class ModuleLoader implements BootstrapInterface
     public function bootstrap($app)
     {
         $this->getModulesConfig();
-        $this->load();
     }
 
     /**
@@ -54,32 +50,49 @@ class ModuleLoader implements BootstrapInterface
      * @throws InvalidConfigException
      */
     private function getModulesConfig() {
-        foreach ($this->modules_paths as $module_path) {
-            $path = Yii::getAlias($module_path);
-            if (is_dir($path)) {
-                foreach (scandir($path) as $module) {
-                    if ($module == '.' || $module == '..')
-                        continue;
 
-                    $base = $path . DIRECTORY_SEPARATOR . $module;
-                    $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
+        $modules = Yii::$app->cache->get(self::CACHE_ID);
 
-                    if (!is_file($config_file))
-                        throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+        if ($modules === false) {
 
-                    $this->modules[$base] = require($config_file);
+            $modules = [];
+
+            foreach ($this->modules_paths as $module_path) {
+                $path = Yii::getAlias($module_path);
+                if (is_dir($path)) {
+                    foreach (scandir($path) as $module) {
+                        if ($module == '.' || $module == '..') {
+                            continue;
+                        }
+
+                        $base = $path . DIRECTORY_SEPARATOR . $module;
+                        $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
+
+                        if (!is_file($config_file)) {
+                            throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+                        }
+
+                        $modules[$base] = require($config_file);
+                    }
                 }
             }
+
+            if (!YII_DEBUG) {
+                Yii::$app->cache->set(self::CACHE_ID, $modules);
+            }
         }
+
+        $this->load($modules);
     }
 
 
     /**
+     * @param $modules
      * @throws InvalidConfigException
      */
-    private function load()
+    private function load($modules)
     {
-        foreach ($this->modules as $basePath => $config) {
+        foreach ($modules as $basePath => $config) {
 
             // Check mandatory config options
             if (!isset($config['class']) || !isset($config['id']))
@@ -125,7 +138,11 @@ class ModuleLoader implements BootstrapInterface
         // Register Event Handlers
         if (isset($config['events'])) {
             foreach ($config['events'] as $event) {
-                Event::on($event['class'], $event['event'], $event['callback']);
+                if (isset($event['class'])) {
+                    Event::on($event['class'], $event['event'], $event['callback']);
+                } else {
+                    Event::on($event[0], $event[1], $event[2]);
+                }
             }
         }
     }
