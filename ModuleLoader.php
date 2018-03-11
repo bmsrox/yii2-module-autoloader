@@ -61,7 +61,8 @@ class ModuleLoader implements BootstrapInterface
                 $path = Yii::getAlias($module_path);
                 if (is_dir($path)) {
                     foreach (scandir($path) as $module) {
-                        if ($module == '.' || $module == '..' || $module[0] == '.') {
+                        if ($module[0] == '.') {
+                            // skip ".", ".." and hidden files
                             continue;
                         }
 
