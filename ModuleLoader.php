@@ -55,7 +55,7 @@ class ModuleLoader implements BootstrapInterface
     private function getModulesConfig()
     {
         $modules = Yii::$app->cache->get(self::CACHE_ID);
-        
+
         if ($modules !== false) {
             return $this->load($modules);
         }
@@ -69,23 +69,7 @@ class ModuleLoader implements BootstrapInterface
                 continue;
             }
 
-            $scanDir = scandir($path);
-
-            foreach ($scanDir as $module) {
-                // skip ".", ".." and hidden files
-                if ($module[0] == '.') {
-                    continue;
-                }
-
-                $base = $path . DIRECTORY_SEPARATOR . $module;
-                $configFile = $base . DIRECTORY_SEPARATOR . 'config.php';
-
-                if (!is_file($configFile)) {
-                    throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
-                }
-
-                $modules[$base] = require($configFile);
-            }
+            $modules = $this->scanModulePath($path);
         }
 
         if (!YII_DEBUG) {
@@ -93,6 +77,35 @@ class ModuleLoader implements BootstrapInterface
         }
 
         return $this->load($modules);
+    }
+
+    private function scanModulePath($path, $subModule = false)
+    {
+        $scanDir = scandir($path);
+
+        foreach ($scanDir as $module) {
+            // skip ".", ".." and hidden files
+            if ($module[0] == '.') {
+                continue;
+            }
+
+            $base = $path . DIRECTORY_SEPARATOR . $module;
+            $configFile = $base . DIRECTORY_SEPARATOR . 'config.php';
+            $hasSubModules = (is_dir($base . DIRECTORY_SEPARATOR . 'modules'));
+
+            if (!is_file($configFile)) {
+                throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+            }
+
+            $index = ($subModule ? $module : $base);
+            $modules[$index] = require($configFile);
+
+            if ($hasSubModules) {
+                $modules[$base]['modules'] = $this->scanModulePath($base . DIRECTORY_SEPARATOR . 'modules', true);
+            }
+        }
+
+        return $modules;
     }
 
     /**
@@ -137,6 +150,15 @@ class ModuleLoader implements BootstrapInterface
         // Append URL Rules
         if (isset($config['urlManagerRules'])) {
             Yii::$app->urlManager->addRules($config['urlManagerRules'], false);
+        }
+
+        unset($config['urlManagerRules']);
+
+        if (!empty($config['modules'])) {
+            $config['modules'] = array_map(function ($subModule) {
+                unset($subModule['urlManagerRules']);
+                return $subModule;
+            }, $config['modules']);
         }
 
         $moduleConfig = [
