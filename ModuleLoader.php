@@ -40,7 +40,11 @@ class ModuleLoader implements BootstrapInterface
      *    'id' => 'admin',
      *    'class' => AdminModule::className(),
      *    'events' => [
-     *          ['class' => SidebarMenu::className(), 'event' => SidebarMenu::REGISTER, 'callback' => [Events::className(), 'onMenuRegister']],
+     *        [
+     *            'class' => SidebarMenu::className(),
+     *            'event' => SidebarMenu::REGISTER,
+     *            'callback' => [Events::className(), 'onMenuRegister']
+     *        ],
      *    ],
      *    'urlManagerRules' => [
      *       '/admin' => '/admin/default/index'
