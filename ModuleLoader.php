@@ -99,8 +99,9 @@ class ModuleLoader implements BootstrapInterface
     {
         foreach ($modules as $basePath => $config) {
             // Check mandatory config options
-            if (!isset($config['class']) || !isset($config['id']))
+            if (!isset($config['class']) || !isset($config['id'])) {
                 throw new InvalidConfigException("Module configuration requires an id and class attribute!");
+            }
 
             $this->register($basePath, $config);
         }
@@ -116,11 +117,12 @@ class ModuleLoader implements BootstrapInterface
     private function register($basePath, $config)
     {
         // Set module alias
-        if (isset($config['namespace']))
+        if (isset($config['namespace'])) {
             Yii::setAlias('@' . str_replace('\\', '/', $config['namespace']), $basePath);
-        else
+        } else {
             Yii::setAlias('@' . $config['id'], $basePath);
-
+        }
+            
         // Handle Submodules
         if (!isset($config['modules'])) {
             $config['modules'] = [];
