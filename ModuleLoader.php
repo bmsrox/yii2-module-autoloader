@@ -53,8 +53,8 @@ class ModuleLoader implements BootstrapInterface
      * ```
      * @throws InvalidConfigException
      */
-    private function getModulesConfig() {
-
+    private function getModulesConfig()
+    {
         $modules = Yii::$app->cache->get(self::CACHE_ID);
 
         if ($modules === false) {
