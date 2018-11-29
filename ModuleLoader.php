@@ -56,37 +56,39 @@ class ModuleLoader implements BootstrapInterface
     private function getModulesConfig()
     {
         $modules = Yii::$app->cache->get(self::CACHE_ID);
+        
+        if ($modules !== false) {
+            return $this->load($modules);
+        }
 
-        if ($modules === false) {
-            $modules = [];
+        $modules = [];
 
-            foreach ($this->modules_paths as $module_path) {
-                $path = Yii::getAlias($module_path);
-                if (is_dir($path)) {
-                    foreach (scandir($path) as $module) {
-                        if ($module[0] == '.') {
-                            // skip ".", ".." and hidden files
-                            continue;
-                        }
-
-                        $base = $path . DIRECTORY_SEPARATOR . $module;
-                        $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
-
-                        if (!is_file($config_file)) {
-                            throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
-                        }
-
-                        $modules[$base] = require($config_file);
+        foreach ($this->modules_paths as $module_path) {
+            $path = Yii::getAlias($module_path);
+            if (is_dir($path)) {
+                foreach (scandir($path) as $module) {
+                    if ($module[0] == '.') {
+                        // skip ".", ".." and hidden files
+                        continue;
                     }
-                }
-            }
 
-            if (!YII_DEBUG) {
-                Yii::$app->cache->set(self::CACHE_ID, $modules);
+                    $base = $path . DIRECTORY_SEPARATOR . $module;
+                    $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
+
+                    if (!is_file($config_file)) {
+                        throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+                    }
+
+                    $modules[$base] = require($config_file);
+                }
             }
         }
 
-        $this->load($modules);
+        if (!YII_DEBUG) {
+            Yii::$app->cache->set(self::CACHE_ID, $modules);
+        }
+
+        return $this->load($modules);
     }
 
     /**
