@@ -116,12 +116,14 @@ class ModuleLoader implements BootstrapInterface
      */
     private function register($basePath, $config)
     {
+        $aliasName = '@' . $config['id'];
+
         // Set module alias
         if (isset($config['namespace'])) {
-            Yii::setAlias('@' . str_replace('\\', '/', $config['namespace']), $basePath);
-        } else {
-            Yii::setAlias('@' . $config['id'], $basePath);
+            $aliasName = '@' . str_replace('\\', '/', $config['namespace']);
         }
+
+        Yii::setAlias($aliasName, $basePath);
             
         // Handle Submodules
         if (!isset($config['modules'])) {
