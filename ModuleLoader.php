@@ -16,7 +16,6 @@ use yii\base\InvalidConfigException;
 
 class ModuleLoader implements BootstrapInterface
 {
-
     const CACHE_ID = 'modules_config';
 
     /**
@@ -40,7 +39,11 @@ class ModuleLoader implements BootstrapInterface
      *    'id' => 'admin',
      *    'class' => AdminModule::className(),
      *    'events' => [
-     *          ['class' => SidebarMenu::className(), 'event' => SidebarMenu::REGISTER, 'callback' => [Events::className(), 'onMenuRegister']],
+     *        [
+     *            'class' => SidebarMenu::className(),
+     *            'event' => SidebarMenu::REGISTER,
+     *            'callback' => [Events::className(), 'onMenuRegister']
+     *        ],
      *    ],
      *    'urlManagerRules' => [
      *       '/admin' => '/admin/default/index'
@@ -49,43 +52,61 @@ class ModuleLoader implements BootstrapInterface
      * ```
      * @throws InvalidConfigException
      */
-    private function getModulesConfig() {
-
+    private function getModulesConfig()
+    {
         $modules = Yii::$app->cache->get(self::CACHE_ID);
 
-        if ($modules === false) {
+        if ($modules !== false) {
+            return $this->load($modules);
+        }
 
-            $modules = [];
+        $modules = [];
 
-            foreach ($this->modules_paths as $module_path) {
-                $path = Yii::getAlias($module_path);
-                if (is_dir($path)) {
-                    foreach (scandir($path) as $module) {
-                        if ($module[0] == '.') {
-                            // skip ".", ".." and hidden files
-                            continue;
-                        }
+        foreach ($this->modules_paths as $module_path) {
+            $path = Yii::getAlias($module_path);
 
-                        $base = $path . DIRECTORY_SEPARATOR . $module;
-                        $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
-
-                        if (!is_file($config_file)) {
-                            throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
-                        }
-
-                        $modules[$base] = require($config_file);
-                    }
-                }
+            if (!is_dir($path)) {
+                continue;
             }
 
-            if (!YII_DEBUG) {
-                Yii::$app->cache->set(self::CACHE_ID, $modules);
+            $modules = $this->scanModulePath($path);
+        }
+
+        if (!YII_DEBUG) {
+            Yii::$app->cache->set(self::CACHE_ID, $modules);
+        }
+
+        return $this->load($modules);
+    }
+
+    private function scanModulePath($path, $subModule = false)
+    {
+        $scanDir = scandir($path);
+
+        foreach ($scanDir as $module) {
+            // skip ".", ".." and hidden files
+            if ($module[0] == '.') {
+                continue;
+            }
+
+            $base = $path . DIRECTORY_SEPARATOR . $module;
+            $configFile = $base . DIRECTORY_SEPARATOR . 'config.php';
+            $hasSubModules = (is_dir($base . DIRECTORY_SEPARATOR . 'modules'));
+
+            if (!is_file($configFile)) {
+                throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+            }
+
+            $index = ($subModule ? $module : $base);
+            $modules[$index] = require($configFile);
+
+            if ($hasSubModules) {
+                $modules[$base]['modules'] = $this->scanModulePath($base . DIRECTORY_SEPARATOR . 'modules', true);
             }
         }
 
-        $this->load($modules);
+        return $modules;
     }
-
 
     /**
      * @param $modules
@@ -94,10 +115,10 @@ class ModuleLoader implements BootstrapInterface
     private function load($modules)
     {
         foreach ($modules as $basePath => $config) {
-
             // Check mandatory config options
-            if (!isset($config['class']) || !isset($config['id']))
+            if (!isset($config['class']) || !isset($config['id'])) {
                 throw new InvalidConfigException("Module configuration requires an id and class attribute!");
+            }
 
             $this->register($basePath, $config);
         }
@@ -112,12 +133,15 @@ class ModuleLoader implements BootstrapInterface
      */
     private function register($basePath, $config)
     {
-        // Set module alias
-        if (isset($config['namespace']))
-            Yii::setAlias('@' . str_replace('\\', '/', $config['namespace']), $basePath);
-        else
-            Yii::setAlias('@' . $config['id'], $basePath);
+        $aliasName = '@' . $config['id'];
 
+        // Set module alias
+        if (isset($config['namespace'])) {
+            $aliasName = '@' . str_replace('\\', '/', $config['namespace']);
+        }
+
+        Yii::setAlias($aliasName, $basePath);
+            
         // Handle Submodules
         if (!isset($config['modules'])) {
             $config['modules'] = [];
@@ -126,6 +150,15 @@ class ModuleLoader implements BootstrapInterface
         // Append URL Rules
         if (isset($config['urlManagerRules'])) {
             Yii::$app->urlManager->addRules($config['urlManagerRules'], false);
+        }
+
+        unset($config['urlManagerRules']);
+
+        if (!empty($config['modules'])) {
+            $config['modules'] = array_map(function ($subModule) {
+                unset($subModule['urlManagerRules']);
+                return $subModule;
+            }, $config['modules']);
         }
 
         $moduleConfig = [
@@ -138,12 +171,22 @@ class ModuleLoader implements BootstrapInterface
 
         // Register Event Handlers
         if (isset($config['events'])) {
-            foreach ($config['events'] as $event) {
-                if (isset($event['class'])) {
-                    Event::on($event['class'], $event['event'], $event['callback']);
-                } else {
-                    Event::on($event[0], $event[1], $event[2]);
-                }
+            $this->registerEvents($config['events']);
+        }
+    }
+
+    /**
+     * Auxiliar method to register the module events
+     * @param string $events list of events
+     * @return void
+     */
+    private function registerEvents(array $events)
+    {
+        foreach ($events as $event) {
+            if (isset($event['class'])) {
+                Event::on($event['class'], $event['event'], $event['callback']);
+            } else {
+                Event::on($event[0], $event[1], $event[2]);
             }
         }
     }
