@@ -64,22 +64,27 @@ class ModuleLoader implements BootstrapInterface
 
         foreach ($this->modules_paths as $module_path) {
             $path = Yii::getAlias($module_path);
-            if (is_dir($path)) {
-                foreach (scandir($path) as $module) {
-                    if ($module[0] == '.') {
-                        // skip ".", ".." and hidden files
-                        continue;
-                    }
 
-                    $base = $path . DIRECTORY_SEPARATOR . $module;
-                    $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
+            if (!is_dir($path)) {
+                continue;
+            }
 
-                    if (!is_file($config_file)) {
-                        throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
-                    }
+            $scanDir = scandir($path);
 
-                    $modules[$base] = require($config_file);
+            foreach ($scanDir as $module) {
+                // skip ".", ".." and hidden files
+                if ($module[0] == '.') {
+                    continue;
                 }
+
+                $base = $path . DIRECTORY_SEPARATOR . $module;
+                $configFile = $base . DIRECTORY_SEPARATOR . 'config.php';
+
+                if (!is_file($configFile)) {
+                    throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+                }
+
+                $modules[$base] = require($configFile);
             }
         }
 
