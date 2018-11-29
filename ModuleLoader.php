@@ -58,7 +58,6 @@ class ModuleLoader implements BootstrapInterface
         $modules = Yii::$app->cache->get(self::CACHE_ID);
 
         if ($modules === false) {
-
             $modules = [];
 
             foreach ($this->modules_paths as $module_path) {
@@ -90,7 +89,6 @@ class ModuleLoader implements BootstrapInterface
         $this->load($modules);
     }
 
-
     /**
      * @param $modules
      * @throws InvalidConfigException
@@ -98,7 +96,6 @@ class ModuleLoader implements BootstrapInterface
     private function load($modules)
     {
         foreach ($modules as $basePath => $config) {
-
             // Check mandatory config options
             if (!isset($config['class']) || !isset($config['id']))
                 throw new InvalidConfigException("Module configuration requires an id and class attribute!");
