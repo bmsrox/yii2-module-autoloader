@@ -16,7 +16,6 @@ use yii\base\InvalidConfigException;
 
 class ModuleLoader implements BootstrapInterface
 {
-
     const CACHE_ID = 'modules_config';
 
     /**
@@ -145,12 +144,22 @@ class ModuleLoader implements BootstrapInterface
 
         // Register Event Handlers
         if (isset($config['events'])) {
-            foreach ($config['events'] as $event) {
-                if (isset($event['class'])) {
-                    Event::on($event['class'], $event['event'], $event['callback']);
-                } else {
-                    Event::on($event[0], $event[1], $event[2]);
-                }
+            $this->registerEvents($config['events']);
+        }
+    }
+
+    /**
+     * Auxiliar method to register the module events
+     * @param string $events list of events
+     * @return void
+     */
+    private function registerEvents(array $events)
+    {
+        foreach ($events as $event) {
+            if (isset($event['class'])) {
+                Event::on($event['class'], $event['event'], $event['callback']);
+            } else {
+                Event::on($event[0], $event[1], $event[2]);
             }
         }
     }
