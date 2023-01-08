@@ -2,6 +2,7 @@
 
 namespace bmsrox\autoloader;
 
+use DirectoryIterator;
 use Yii;
 use yii\base\BootstrapInterface;
 use yii\base\Event;
@@ -49,43 +50,56 @@ class ModuleLoader implements BootstrapInterface
      * ```
      * @throws InvalidConfigException
      */
-    private function getModulesConfig() {
-
+    private function getModulesConfig()
+    {
         $modules = Yii::$app->cache->get(self::CACHE_ID);
 
-        if ($modules === false) {
+        if (!empty($modules)) {
+            return $this->load($modules);
+        }
 
-            $modules = [];
+        $modules = [];
 
-            foreach ($this->modules_paths as $module_path) {
-                $path = Yii::getAlias($module_path);
-                if (is_dir($path)) {
-                    foreach (scandir($path) as $module) {
-                        if ($module[0] == '.') {
-                            // skip ".", ".." and hidden files
-                            continue;
-                        }
+        foreach ($this->modules_paths as $module_path) {
+            $basePath = Yii::getAlias($module_path);
 
-                        $base = $path . DIRECTORY_SEPARATOR . $module;
-                        $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
-
-                        if (!is_file($config_file)) {
-                            throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
-                        }
-
-                        $modules[$base] = require($config_file);
-                    }
-                }
+            if (!is_dir($basePath)) {
+                continue;
             }
 
-            if (!YII_DEBUG) {
-                Yii::$app->cache->set(self::CACHE_ID, $modules);
-            }
+            $this->scanModulePath($basePath, $modules);
+        }
+
+        if (!YII_DEBUG) {
+            Yii::$app->cache->set(self::CACHE_ID, $modules);
         }
 
         $this->load($modules);
     }
 
+    private function scanModulePath($path, &$modules)
+    {
+        foreach (new DirectoryIterator($path) as $folder) {
+            if ($folder->isDot() || !$folder->isDir()) {
+                continue;
+            }
+
+            $base = $path . DIRECTORY_SEPARATOR . $folder->current();
+            $subModules = $base . DIRECTORY_SEPARATOR . 'modules';
+
+            if (is_dir($subModules)) {
+                $this->scanModulePath($subModules, $modules);
+            }
+
+            $config_file = $base . DIRECTORY_SEPARATOR . 'config.php';
+
+            if (!is_file($config_file)) {
+                throw new InvalidConfigException("Module configuration requires a 'config.php' file!");
+            }
+
+            $modules[$base] = require($config_file);
+        }
+    }
 
     /**
      * @param $modules
@@ -94,10 +108,9 @@ class ModuleLoader implements BootstrapInterface
     private function load($modules)
     {
         foreach ($modules as $basePath => $config) {
-
-            // Check mandatory config options
-            if (!isset($config['class']) || !isset($config['id']))
+            if (!isset($config['class']) || !isset($config['id'])) {
                 throw new InvalidConfigException("Module configuration requires an id and class attribute!");
+            }
 
             $this->register($basePath, $config);
         }
